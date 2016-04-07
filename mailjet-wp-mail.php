@@ -34,5 +34,5 @@ require_once __DIR__ . '/inc/classes/class-mailjet-wp-mail.php';
  */
 function wp_mail( $to, $subject, $message, $headers = '', $attachments = array() ) {
 
-	Mailjet_WP_Mail::send( $to, $subject, $message, $headers, $attachments );
+	return Mailjet_WP_Mail::send( $to, $subject, $message, $headers, $attachments );
 }

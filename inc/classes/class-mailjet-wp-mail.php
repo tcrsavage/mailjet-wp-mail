@@ -23,22 +23,25 @@ class Mailjet_WP_Mail {
 	 * @param string $headers             Headers string (Reply-To, CC etc)
 	 * @param array $attachments          Attachments array of file paths
 	 * @param array $request_body         Override array to define explicit API call body params (overrides internal handling and filtering)
+	 * @return bool
 	 */
 	static function send( $to, $subject, $message, $headers = '', $attachments = array(), $request_body = array() ) {
 
 		$body = array(
 			'Subject'     => $subject,
 			'Html-part'   => $message,
-			'Recipients'  => array_map( function( $email ) {
-				return (object) array( 'Email' => $email );
-			}, (array) $to )
 		);
 
-		$body = static::parse_send_args( $to, $subject, $message, $headers, $attachments, $body );
+		$body     = static::parse_send_args( $to, $subject, $message, $headers, $attachments, $body );
+		$body     = wp_parse_args( $request_body, $body );
 
-		$body = wp_parse_args( $request_body, $body );
+		$response =  static::request( 'POST', 'send', $body );
 
-		static::request( 'POST', 'send', $body );
+		if ( is_wp_error( $response ) || empty( $response['response']['code'] ) || $response['response']['code'] > 200 ) {
+			return false;
+		}
+
+		return true;
 	}
 
 	/**
@@ -65,11 +68,7 @@ class Mailjet_WP_Mail {
 			'body' => json_encode( $body )
 		) );
 
-		if ( is_wp_error( $response ) || empty( $response['response']['code'] ) || $response['response']['code'] > 200 ) {
-			return false;
-		}
-
-		return true;
+		return $response;
 	}
 
 	/**
@@ -105,7 +104,13 @@ class Mailjet_WP_Mail {
 			$to = explode( ',', $to );
 		}
 
-		return apply_filters( 'mailjet_wp_mail_to_email', $to );
+		$to = apply_filters( 'mailjet_wp_mail_to_email', $to );
+
+		$body['Recipients']  = array_map( function( $email ) {
+			return (object) array( 'Email' => $email );
+		}, $to );
+
+		return $body;
 	}
 
 	/**
@@ -197,7 +202,7 @@ class Mailjet_WP_Mail {
 		$body['FromName']  = apply_filters( 'wp_mail_from_name', $from_name );
 		$body['FromEmail'] = apply_filters( 'wp_mail_from', $from_email );
 
-		return apply_filters( 'mailjet_wp_mail_headers', $body );
+		return $body;
 	}
 
 	/**
@@ -240,6 +245,6 @@ class Mailjet_WP_Mail {
 		// Add to send request body
 		$body['Attachments'] = $attachments;
 
-		return apply_filters( 'mailjet_wp_mail_attachments', $body );
+		return $body;
 	}
 }
