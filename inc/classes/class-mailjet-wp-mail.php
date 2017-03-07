@@ -29,11 +29,17 @@ class Mailjet_WP_Mail {
 
 		$body = array(
 			'Subject'     => $subject,
-			'Html-part'   => $message,
 		);
 
 		$body     = static::parse_send_args( $to, $subject, $message, $headers, $attachments, $body );
 		$body     = wp_parse_args( $request_body, $body );
+		
+		// Add message in appropriate type field.
+		if ( isset( $body['Headers'], $body['Headers']['content-type'] ) && false !== strpos( $body['Headers']['content-type'], 'html' ) ) {
+			$body['Html-part'] = $message;
+		} else {
+			$body['Text-part'] = $message;
+		}
 
 		$response =  static::request( 'POST', 'send', $body );
 
